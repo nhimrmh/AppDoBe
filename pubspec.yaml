@@ -26,10 +26,14 @@ dependencies:
   flutter_sparkline: ^0.1.0
   charts_flutter: ^0.9.0
   shimmer: ^1.1.0
+  percent_indicator: ^2.1.1+1
+  http: ^0.12.0+4
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^0.1.2
-
+  connectivity: ^0.4.8+2
+  video_player:
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -53,12 +57,13 @@ flutter:
     - locale/i18n_vn.json
     - images/true/
     - images/false/
+    - images/standard/
     - images/
     - assets/
     - assets/true/
     - assets/false/
-    - questions/questions_list_true.json
-    - questions/questions_list_false.json
+    - assets/standard/
+    - questions/
 
   fonts:
     - family: Montserrat

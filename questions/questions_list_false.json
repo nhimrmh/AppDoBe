@@ -72,6 +72,10 @@
     "answer": "false"
   },
   {
+    "question_name": "sound_19.mp3",
+    "answer": "false"
+  },
+  {
     "question_name": "sound_20.mp3",
     "answer": "false"
   },
@@ -92,10 +96,6 @@
     "answer": "false"
   },
   {
-    "question_name": "sound_19.mp3",
-    "answer": "false"
-  },
-  {
     "question_name": "sound_25.mp3",
     "answer": "false"
   },
@@ -109,10 +109,6 @@
   },
   {
     "question_name": "sound_28.mp3",
-    "answer": "false"
-  },
-  {
-    "question_name": "sound_29.mp3",
     "answer": "false"
   }
 ]

@@ -5,35 +5,56 @@ import 'package:flutter/widgets.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'questionsModel.dart';
 import 'translations.dart';
+import 'VideoPlayer.dart';
+import 'package:connectivity/connectivity.dart';
 
 Color rowColor = Colors.white;
 String total, real , fake, real_name;
 List<String> false_name = new List<String>();
+List<String> standard_name = new List<String>();
 List<AudioPlayer> list_playing = new List<AudioPlayer>();
 
 class practiceList extends StatefulWidget{
+  BuildContext mContext;
+
+  practiceList(this.mContext);
+
   @override
   State<StatefulWidget> createState() {
     // TODO: implement createState
-    return practiceListScene();
+    return practiceListScene(mContext);
   }
 }
 
 class practiceListScene extends State<practiceList>{
-  List<questionsModel> trueSoundList;
-  List<questionsModel> falseSoundList;
+  List<questionsModel> trueSoundList, falseSoundList, standardSoundList;
   List<dynamic> myData;
-  double heightTrue, heightFalse;
-  bool isExpandedFalse = false, isExpandedTrue = false;
   Color titleColor = Colors.black54, buttonColor = Colors.green, durationColor = Colors.black54;
-
+  BuildContext mContext;
+  practiceListScene(this.mContext);
+  final scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   void initState() {
     super.initState();
     trueSoundList = new List<questionsModel>();
     falseSoundList = new List<questionsModel>();
-    loadQuestionTrue();
-    loadQuestionFalse();
+    standardSoundList = new List<questionsModel>();
+  }
+
+  void showSnackBar(){
+    scaffoldKey.currentState.showSnackBar(
+        SnackBar(
+          content: Text(Translations.of(context).text('practice_instruction')),
+          duration: Duration(seconds: 5),
+        )
+    );
+  }
+
+  Future loadQuestions() async {
+    await loadQuestionTrue();
+    await loadQuestionFalse();
+    await loadQuestionStandard();
+    return;
   }
 
   Future<String> loadJsonTrue() async {
@@ -44,7 +65,12 @@ class practiceListScene extends State<practiceList>{
     return await DefaultAssetBundle.of(context).loadString("questions/questions_list_false.json");
   }
 
+  Future<String> loadJsonStandard() async {
+    return await DefaultAssetBundle.of(context).loadString("questions/questions_list_standard.json");
+  }
+
   void loadQuestionTrue() async {
+    trueSoundList.clear();
     String temp = await loadJsonTrue();
     myData = json.decode(temp);
     for(int i = 0; i < myData.length; i++){ //replace 5 by numbOfTrue when use
@@ -54,12 +80,26 @@ class practiceListScene extends State<practiceList>{
   }
 
   void loadQuestionFalse() async {
+    falseSoundList.clear();
+    false_name.clear();
     String temp = await loadJsonFalse();
     myData = json.decode(temp);
     for(int i = 0; i < myData.length; i++){ //replace 5 by numbOfTrue when use
       questionsModel tempQuestion = new questionsModel(myData[i]["question_name"].toString(), myData[i]["answer"].toString());
       falseSoundList.add(tempQuestion);
       false_name.add(Translations.of(context).text("false/" + myData[i]["question_name"]));
+    }
+  }
+
+  void loadQuestionStandard() async {
+    standardSoundList.clear();
+    standard_name.clear();
+    String temp = await loadJsonStandard();
+    myData = json.decode(temp);
+    for(int i = 0; i < myData.length; i++){ //replace 5 by numbOfTrue when use
+      questionsModel tempQuestion = new questionsModel(myData[i]["question_name"].toString(), myData[i]["answer"].toString());
+      standardSoundList.add(tempQuestion);
+      standard_name.add(Translations.of(context).text("standard/" + myData[i]["question_name"]));
     }
   }
 
@@ -70,126 +110,158 @@ class practiceListScene extends State<practiceList>{
     fake = Translations.of(context).text('practice_water_fake');
     real_name = Translations.of(context).text('practice_real_name');
     // TODO: implement build
-    return new MaterialApp(
-      supportedLocales: [
-        Locale('en'),
-        Locale('vn'),
-      ],
-      home: new Scaffold(
-          appBar: AppBar(title: Text(Translations.of(context).text('app_bar_practice')),),
-          body: ListView(
-            children: <Widget>[
-              Column(
-                children: <Widget>[
-                  FutureBuilder(
-                    future: loadJsonTrue(),
-                    builder: (context, snapshot){
-                      if(snapshot.connectionState == ConnectionState.done) return trueSoundListView();
-                      else return CircularProgressIndicator();
-                    },
+    return MediaQuery.removePadding(
+      context: context,
+      child: DefaultTabController(
+          length: 3,
+          child: FutureBuilder(
+            future: loadQuestions(),
+            builder: (context, snapshot){
+              if(snapshot.connectionState == ConnectionState.done) {
+                return Scaffold(
+                  key: scaffoldKey,
+                  appBar: AppBar(
+                    title: Text(Translations.of(context).text('practice_title')),
+                    backgroundColor: Colors.cyan,
+                    bottom: TabBar(
+                      isScrollable: true,
+                      indicatorColor: Colors.white,
+                      indicatorWeight: 3,
+                      indicatorPadding: EdgeInsets.only(left: 20, right: 20),
+                      unselectedLabelStyle: TextStyle(fontSize: 12),
+                      tabs: <Widget>[
+                        Tab(
+                          child: Column(
+                            children: <Widget>[
+                              Container(
+                                margin: EdgeInsets.only(bottom: 5),
+                                child: Text(Translations.of(context).text('practice_bar_standard')),
+                              ),
+                              Text(total + standardSoundList.length.toString()),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          child: Column(
+                            children: <Widget>[
+                              Container(
+                                margin: EdgeInsets.only(bottom: 5),
+                                child: Text(Translations.of(context).text('practice_bar_leakage')),
+                              ),
+                              Text(total + trueSoundList.length.toString()),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          child: Column(
+                            children: <Widget>[
+                              Container(
+                                margin: EdgeInsets.only(bottom: 5),
+                                child: Text(Translations.of(context).text('practice_bar_fake')),
+                              ),
+                              Text(total + falseSoundList.length.toString()),
+                            ],
+                          ),
+                        )
+                      ],
+                    ),
                   ),
-                  FutureBuilder(
-                    future: loadJsonFalse(),
-                    builder: (context, snapshot){
-                      if(snapshot.connectionState == ConnectionState.done) return falseSoundListView();
-                      else return CircularProgressIndicator();
-                    },
+                  body: Builder(
+                    builder: (context) => tabBarWidget(context),
                   )
-                ],
-              ),
-            ],
+              );
+              }
+              else return Container(
+                height: double.infinity,
+                width: double.infinity,
+                color: Colors.white,
+                child: Center(
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              );
+            },
           )
-      )
+      ),
+      removeTop: true,
     );
   }
 
-  void _trueExpansionChanged(bool ixExpanded){
-    if(ixExpanded){
-      setState(() {
-        isExpandedFalse = false;
-        isExpandedTrue = true;
-      });
-    }
-    else{
-
-    }
-  }
-
-  void _falseExpansionChanged(bool ixExpanded){
-    if(ixExpanded){
-      setState(() {
-        isExpandedFalse = true;
-        isExpandedTrue = false;
-      });
-    }
-    else{
-
-    }
+  Widget tabBarWidget(BuildContext context){
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      Scaffold.of(context).showSnackBar(
+          SnackBar(
+            content: Text(Translations.of(context).text('practice_instruction')),
+            duration: Duration(seconds: 5),
+          )
+      );
+    });
+    return TabBarView(
+      children: <Widget>[
+        ListView(
+          children: <Widget>[
+            standardSoundListView()
+          ],
+        ),
+        ListView(
+          children: <Widget>[
+            trueSoundListView()
+          ],
+        ),
+        ListView(
+          children: <Widget>[
+            falseSoundListView()
+          ],
+        ),
+      ],
+    );
   }
 
   Widget trueSoundListView() {
-    return Container(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          ListView.builder(
-            scrollDirection: Axis.vertical,
-            shrinkWrap: true,
-            itemCount: 1,
-            itemBuilder: (context, i) {
-              return new Container(
-                child: ExpansionTile(
-                  initiallyExpanded : isExpandedTrue,
-                  onExpansionChanged: _trueExpansionChanged,
-                  subtitle: Text(total + trueSoundList.length.toString(), style: TextStyle(fontSize: 14),),
-                  title: Text(real, style: TextStyle(fontSize: 16),),
-                  children: <Widget>[
-                    new ExpansionContentTrue(trueSoundList, heightTrue, context, buttonColor, durationColor),
-                  ],
-                )
-              );
-            },
-          ),
-        ],
-      ),
-    );
+    return ExpansionContentTrueScene(trueSoundList, context, buttonColor, durationColor);
   }
 
   Widget falseSoundListView() {
-    return Container(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          ListView.builder(
-            scrollDirection: Axis.vertical,
-            shrinkWrap: true,
-            itemCount: 1,
-            itemBuilder: (context, i) {
-              return new ExpansionTile(
-                initiallyExpanded : isExpandedFalse,
-                onExpansionChanged: _falseExpansionChanged,
-                subtitle: Text(total + falseSoundList.length.toString(), style: TextStyle(fontSize: 14),),
-                title: Text(fake, style: TextStyle(fontSize: 16),),
-                children: <Widget> [
-                  new ExpansionContentFalse(falseSoundList, heightFalse, context, buttonColor, durationColor),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
+    return ExpansionContentFalse(falseSoundList, context, buttonColor, durationColor);
+  }
+
+  Widget standardSoundListView() {
+    return ExpansionContentStandard(standardSoundList, context, buttonColor, durationColor);
   }
 }
 
-class ExpansionContentTrue extends StatelessWidget {
+class ExpansionContentTrueScene extends StatefulWidget {
   List<questionsModel> trueSoundList;
-  double heightTrue;
   BuildContext context;
-  ExpansionContentTrue(this.trueSoundList, this.heightTrue, this.context, this.buttonColor, this.durationColor);
   Color titleColor, buttonColor, durationColor;
+  @override
+  State<StatefulWidget> createState() {
+    // TODO: implement createState
+    return ExpansionContentTrue(trueSoundList, context, buttonColor, durationColor);
+  }
+
+  ExpansionContentTrueScene(this.trueSoundList, this.context, this.buttonColor,
+      this.durationColor);
+}
+
+class ExpansionContentTrue extends State<ExpansionContentTrueScene>{
+  List<questionsModel> trueSoundList;
+  BuildContext context;
+  ExpansionContentTrue(this.trueSoundList, this.context, this.buttonColor, this.durationColor);
+  Color titleColor, buttonColor, durationColor;
+  bool isExpanded = false;
+
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   _buildExpandableContent(List<questionsModel> sound, String name){
+
     List<Widget> columnContent = [];
     for(int i = 0; i < sound.length; i++){
       columnContent.add(
@@ -197,24 +269,36 @@ class ExpansionContentTrue extends StatelessWidget {
               width: MediaQuery.of(context).size.width,
               child: ListTile(
                   title: Container(
-                    color: rowColor,
-                    child: ExpansionTile(
-                      title: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      color: rowColor,
+                      child: ExpansionTile(
+                        title: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(name + " " + (i + 1).toString(), style: TextStyle(color: titleColor, fontSize: 14),),
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: audioWidget("true/" + sound[i].filePath, buttonColor, durationColor),
+                            )
+                          ],
+                        ),
+                        onExpansionChanged: (e){
+                          setState(() {
+                            if(e == true){
+                              isExpanded = true;
+                            }
+                            else isExpanded = false;
+                          });
+                        },
                         children: <Widget>[
-                          Expanded(
-                            child: Text(name + " " + (i + 1).toString(), style: TextStyle(color: titleColor, fontSize: 14),),
-                          ),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: audioWidget("true/" + sound[i].filePath, buttonColor, durationColor),
+                          Image.asset("images/true/" + sound[i].filePath.substring(0,sound[i].filePath.length-3) + "jpg"),
+                          Container(
+                            margin: EdgeInsets.only(top: 10),
+                            child: VideoState(sound[i].filePath.substring(0,sound[i].filePath.length-3) + "mp4", isExpanded),
                           )
                         ],
-                      ),
-                      children: <Widget>[
-                        Image.asset("images/true/" + sound[i].filePath.substring(0,sound[i].filePath.length-3) + "jpg")
-                      ],
-                    )
+                      )
                   )
               )
           )
@@ -227,7 +311,7 @@ class ExpansionContentTrue extends StatelessWidget {
   Widget build(BuildContext context) {
     // TODO: implement build
     return Container(
-        height: MediaQuery.of(context).size.height - 2*85 - 55,
+        height: MediaQuery.of(context).size.height - 100,
         child: ListView(
           children: _buildExpandableContent(trueSoundList, real_name),
         )
@@ -244,24 +328,24 @@ class ExpansionContentFalse extends StatelessWidget {
               width: MediaQuery.of(context).size.width,
               child: ListTile(
                   title: Container(
-                    color: rowColor,
-                    child: ExpansionTile(
-                      title: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      color: rowColor,
+                      child: ExpansionTile(
+                        title: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: <Widget>[
+                            Expanded(
+                                child: Text(false_name.elementAt(i), style: TextStyle(fontSize: 14),)
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: audioWidget("false/" + sound[i].filePath, buttonColor, durationColor),
+                            )
+                          ],
+                        ),
                         children: <Widget>[
-                          Expanded(
-                            child: Text(false_name.elementAt(i), style: TextStyle(fontSize: 14),)
-                          ),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: audioWidget("false/" + sound[i].filePath, buttonColor, durationColor),
-                          )
+                          Image.asset("images/false/" + sound[i].filePath.substring(0,sound[i].filePath.length-3) + "jpg")
                         ],
-                      ),
-                      children: <Widget>[
-                        Image.asset("images/false/" + sound[i].filePath.substring(0,sound[i].filePath.length-3) + "jpg")
-                      ],
-                    )
+                      )
                   )
               )
           )
@@ -277,13 +361,65 @@ class ExpansionContentFalse extends StatelessWidget {
   Widget build(BuildContext context) {
     // TODO: implement build
     return Container(
-        height: MediaQuery.of(context).size.height - 2*85 - 55,
+        height: MediaQuery.of(context).size.height - 100,
         child: ListView(
           children: _buildExpandableContent(falseSoundList, "Fake sound"),
         )
     );
   }
-  ExpansionContentFalse(this.falseSoundList, this.heightFalse, this.context, this.buttonColor, this.durationColor);
+  ExpansionContentFalse(this.falseSoundList, this.context, this.buttonColor, this.durationColor);
+}
+
+class ExpansionContentStandard extends StatelessWidget {
+  List<questionsModel> standardSoundList;
+  BuildContext context;
+  ExpansionContentStandard(this.standardSoundList, this.context, this.buttonColor, this.durationColor);
+  Color titleColor, buttonColor, durationColor;
+
+  _buildExpandableContent(List<questionsModel> sound, String name){
+    List<Widget> columnContent = [];
+    for(int i = 0; i < sound.length; i++){
+      columnContent.add(
+          new Container(
+              width: MediaQuery.of(context).size.width,
+              child: ListTile(
+                  title: Container(
+                      color: rowColor,
+                      child: ExpansionTile(
+                        title: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: <Widget>[
+                            Expanded(
+                                child: Text(standard_name.elementAt(i), style: TextStyle(fontSize: 14),)
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: audioWidget("standard/" + sound[i].filePath, buttonColor, durationColor),
+                            )
+                          ],
+                        ),
+                        children: <Widget>[
+                          Image.asset("images/standard/" + sound[i].filePath.substring(0,sound[i].filePath.length-3) + "jpg")
+                        ],
+                      )
+                  )
+              )
+          )
+      );
+    }
+    return columnContent;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    return Container(
+        height: MediaQuery.of(context).size.height - 100,
+        child: ListView(
+          children: _buildExpandableContent(standardSoundList, real_name),
+        )
+    );
+  }
 }
 
 class audioWidget extends StatefulWidget {
